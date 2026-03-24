@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>ChessMaster — Play Daily & Win!</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+:root{
+  --gold:#ffd700;--gold2:#ff9500;--dark:#0a0a1a;
+  --surface:#12122a;--card:#1a1a3a;
+  --green:#00cc66;--blue:#0088ff;--purple:#8800ff;
+  --accent:#ff6b00;--pink:#ff0088;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-family:'Segoe UI',sans-serif}
+.page{display:none;width:100%;height:100%;position:absolute;top:0;left:0;overflow-y:auto}
+.page.active{display:flex;flex-direction:column;align-items:center}
+
+/* ═══ SPLASH ═══ */
+#pgSplash{
+  background:radial-gradient(ellipse at 30% 20%,#1a0a3a,#0a0a1a 60%),
+  radial-gradient(ellipse at 70% 80%,#0a1a3a,transparent);
+  justify-content:center;
+}
+.splash-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.floating-piece{position:absolute;font-size:2.5rem;opacity:.06;animation:floatPiece 8s ease-in-out infinite}
+@keyframes floatPiece{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-30px) rotate(10deg)}}
+
+.logo-wrap{text-align:center;margin-bottom:32px;position:relative;z-index:1}
+.logo-chess{font-size:5rem;margin-bottom:8px;filter:drop-shadow(0 0 30px #ffd70060);animation:logoPulse 2s ease-in-out infinite}
+@keyframes logoPulse{0%,100%{filter:drop-shadow(0 0 20px #ffd70060)}50%{filter:drop-shadow(0 0 50px #ffd700a0)}}
+.logo-title{font-size:2.8rem;font-weight:900;letter-spacing:-2px;
+  background:linear-gradient(135deg,#ffd700 0%,#ff9500 50%,#ff0088 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:.85rem;color:#8888aa;letter-spacing:3px;text-transform:uppercase;margin-top:4px}
+
+.coins-top{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#2a2a00,#1a1a00);
+  border:1px solid #ffd70050;border-radius:20px;padding:8px 18px;margin-bottom:20px}
+.coins-top span{font-size:1.1rem;font-weight:800;color:var(--gold)}
+
+.daily-reward-btn{background:linear-gradient(135deg,#1a3a00,#0a2a00);border:2px solid var(--green);
+  border-radius:12px;padding:14px 24px;color:#00ff88;font-size:.9rem;font-weight:700;cursor:pointer;
+  margin-bottom:20px;width:280px;display:flex;align-items:center;justify-content:space-between;
+  transition:all .2s;position:relative;overflow:hidden}
+.daily-reward-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,#00ff8815,transparent);
+  transform:translateX(-100%);animation:shimmer 2s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+.daily-reward-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px #00cc6630}
+.daily-reward-btn .dr-left{display:flex;flex-direction:column;gap:2px}
+.daily-reward-btn .dr-streak{font-size:.7rem;color:#88aa88}
+.dr-badge{background:var(--green);color:#000;font-size:.72rem;font-weight:800;padding:3px 8px;border-radius:8px}
+
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:280px}
+.mgbtn{padding:16px 12px;border-radius:12px;border:none;cursor:pointer;font-size:.85rem;font-weight:700;
+  letter-spacing:.5px;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px;
+  position:relative;overflow:hidden}
+.mgbtn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#ffffff10,transparent)}
+.mgbtn:hover{transform:translateY(-3px);box-shadow:0 10px 28px #00000040}
+.mgbtn:active{transform:translateY(0)}
+.mgbtn .mg-icon{font-size:1.6rem}
+.mgbtn .mg-label{font-size:.78rem}
+.mgbtn.g1{background:linear-gradient(135deg,#ff6b00,#ff9500)}
+.mgbtn.g2{background:linear-gradient(135deg,#0066ff,#00aaff)}
+.mgbtn.g3{background:linear-gradient(135deg,#8800ff,#cc00ff)}
+.mgbtn.g4{background:linear-gradient(135deg,#00aa44,#00ff88)}
+.mgbtn.g5{background:linear-gradient(135deg,#cc0044,#ff0088)}
+.mgbtn.g6{background:linear-gradient(135deg,#886600,#ffaa00)}
+.mgbtn.wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:10px;
+  background:linear-gradient(135deg,#1a0a3a,#2a1a5a);border:1.5px solid #8844ff}
+
+/* ═══ DAILY REWARD POPUP ═══ */
+.popup-ov{position:fixed;inset:0;background:#00000080;z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.popup-ov.open{display:flex}
+.popup-card{background:var(--card);border-radius:20px;padding:28px;max-width:340px;width:100%;
+  text-align:center;border:2px solid var(--gold);box-shadow:0 0 60px #ffd70030;animation:popIn .3s ease}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.popup-card h2{font-size:1.5rem;font-weight:800;color:var(--gold);margin-bottom:6px}
+.popup-card p{font-size:.85rem;color:#8888aa;margin-bottom:20px}
+.reward-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:20px}
+.reward-day{background:#0a0a2a;border:1.5px solid #2a2a4a;border-radius:8px;padding:6px 4px;text-align:center;cursor:pointer;transition:all .2s}
+.reward-day.collected{border-color:var(--green);background:#0a2a1a}
+.reward-day.today{border-color:var(--gold);background:#2a2000;animation:todayGlow .8s ease-in-out infinite alternate}
+@keyframes todayGlow{from{box-shadow:0 0 8px #ffd70060}to{box-shadow:0 0 20px #ffd700a0}}
+.reward-day .rd-day{font-size:.55rem;color:#666;margin-bottom:2px}
+.reward-day .rd-coin{font-size:.85rem}
+.reward-day .rd-amt{font-size:.6rem;color:var(--gold);font-weight:700}
+
+/* ═══ GAME SETUP ═══ */
+#pgSetup{background:var(--dark);justify-content:flex-start;padding-top:20px}
+.setup-wrap{width:100%;max-width:400px;padding:16px}
+.setup-wrap h2{font-size:1.3rem;font-weight:800;color:var(--gold);margin-bottom:16px;text-align:center}
+.setup-section{background:var(--card);border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid #2a2a4a}
+.setup-section h3{font-size:.78rem;font-weight:700;color:#8888aa;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+.opt-row{display:flex;gap:8px;flex-wrap:wrap}
+.opt-b{flex:1;min-width:70px;padding:10px 8px;border-radius:8px;border:2px solid #2a2a4a;
+  background:#0a0a2a;color:#8888cc;cursor:pointer;font-size:.8rem;font-weight:600;text-align:center;transition:all .2s}
+.opt-b.active{border-color:var(--gold);background:#2a2000;color:var(--gold)}
+.name-inp{width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #2a2a4a;
+  background:#0a0a2a;color:#fff;font-size:.9rem;outline:none;margin-bottom:8px}
+.name-inp:focus{border-color:var(--gold)}
+
+/* ═══ GAME PAGE ═══ */
+#pgGame{background:var(--dark);padding:0;justify-content:flex-start}
+.game-hud{width:100%;background:#0a0a1a;border-bottom:1px solid #2a2a4a;
+  padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10}
+.hud-player{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;
+  background:#ffffff08;border:1.5px solid transparent;transition:all .3s;min-width:110px}
+.hud-player.active{border-color:var(--gold);background:#ffd70015;box-shadow:0 0 12px #ffd70025}
+.hp-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;flex-shrink:0}
+.hp-name{font-size:.72rem;font-weight:700;color:#fff;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+.hp-captured{font-size:.6rem;color:#ffd70080}
+.hud-mid{text-align:center}
+.hud-turn{font-size:.65rem;color:#8888aa;letter-spacing:1px}
+.hud-timer{font-size:1.1rem;font-weight:800;color:var(--gold);font-family:monospace}
+.hud-timer.warn{color:#ff4444;animation:twarn 1s ease-in-out infinite}
+@keyframes twarn{0%,100%{opacity:1}50%{opacity:.4}}
+.board-wrap{display:flex;flex-direction:column;align-items:center;padding:10px;width:100%;flex:1;justify-content:center}
+#chessBoard{display:grid;grid-template-columns:repeat(8,1fr);border-radius:10px;overflow:hidden;
+  box-shadow:0 0 0 4px #ffd70040,0 0 0 8px #1a1a3a,0 20px 60px #00000060;
+  width:min(380px,calc(100vw - 24px));height:min(380px,calc(100vw - 24px))}
+.cell{display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .15s}
+.cell.light{background:#f0d9b5}
+.cell.dark{background:#b58863}
+
+/* Board themes */
+.theme-ocean .cell.light{background:#d4e8f0}
+.theme-ocean .cell.dark{background:#4a90b8}
+.theme-forest .cell.light{background:#d4e8c4}
+.theme-forest .cell.dark{background:#4a8b4a}
+.theme-neon .cell.light{background:#1a0a3a}
+.theme-neon .cell.dark{background:#3a0a6a}
+.theme-purple .cell.light{background:#e8d4f0}
+.theme-purple .cell.dark{background:#8b4ab8}
+.theme-gold .cell.light{background:#fff3c4}
+.theme-gold .cell.dark{background:#c8a020}
+.theme-night .cell.light{background:#2a2a4a}
+.theme-night .cell.dark{background:#1a1a2a}
+.theme-fire .cell.light{background:#fff0d4}
+.theme-fire .cell.dark{background:#c84a00}
+.theme-ice .cell.light{background:#e0f4ff}
+.theme-ice .cell.dark{background:#4a9abc}
+
+.cell.selected{background:#ffff0060!important;box-shadow:inset 0 0 0 3px #ffd700}
+.cell.valid-move::after{content:'';position:absolute;width:30%;height:30%;background:#00000040;border-radius:50%}
+.cell.valid-capture{background:#ff444440!important;box-shadow:inset 0 0 0 3px #ff4444}
+.cell.last-move{background:#ffd70030!important}
+.cell.check{background:#ff000040!important;animation:checkPulse .5s ease-in-out infinite alternate}
+@keyframes checkPulse{from{background:#ff000040!important}to{background:#ff000080!important}}
+.chess-piece{font-size:min(40px,calc((100vw - 24px)/8 * 0.82));line-height:1;z-index:1;
+  transition:transform .1s;filter:drop-shadow(0 2px 4px #00000060);cursor:pointer}
+.chess-piece:hover{transform:scale(1.1)}
+.cell-label{position:absolute;font-size:.5rem;font-weight:700;opacity:.4;pointer-events:none}
+.cell-label.file{bottom:2px;right:3px}
+.cell-label.rank{top:2px;left:3px}
+
+/* Captured pieces strip */
+.captured-strip{display:flex;flex-wrap:wrap;gap:2px;padding:4px 8px;min-height:28px;
+  background:#0a0a1a;border-top:1px solid #2a2a4a;width:100%;max-width:400px}
+.cap-piece{font-size:.9rem;opacity:.7}
+
+/* Move history */
+.move-history{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;background:#0a0a1a;
+  border-top:1px solid #2a2a4a;width:100%;font-size:.7rem;color:#888;scrollbar-width:none}
+.move-history::-webkit-scrollbar{display:none}
+.move-item{white-space:nowrap;padding:3px 8px;background:#1a1a3a;border-radius:4px;color:#aaa}
+.move-item:last-child{color:var(--gold);background:#2a2000}
+
+/* Game controls */
+.game-controls{display:flex;gap:8px;padding:8px 12px;background:#0a0a1a;width:100%;justify-content:center}
+.gc-btn{padding:8px 14px;border-radius:8px;border:1px solid #2a2a4a;background:#1a1a3a;
+  color:#8888aa;font-size:.75rem;cursor:pointer;transition:all .2s;font-weight:600}
+.gc-btn:hover{border-color:var(--gold);color:var(--gold)}
+.gc-btn.danger{border-color:#ff444430;color:#ff8888}
+.gc-btn.danger:hover{border-color:#ff4444;background:#2a0a0a}
+
+/* ═══ SHOP ═══ */
+#pgShop{background:var(--dark);justify-content:flex-start;padding-top:0}
+.shop-header{width:100%;background:linear-gradient(135deg,#1a0a3a,#0a0a2a);
+  padding:20px;text-align:center;border-bottom:1px solid #2a2a4a}
+.shop-header h2{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#ffd700,#ff9500);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.shop-coins{display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+  background:#2a2000;border:1px solid #ffd70050;border-radius:20px;padding:6px 16px}
+.shop-coins span{color:var(--gold);font-size:1rem;font-weight:800}
+.shop-content{width:100%;max-width:500px;padding:16px}
+.shop-section-title{font-size:.78rem;font-weight:700;color:#8888aa;letter-spacing:2px;
+  text-transform:uppercase;margin:16px 0 10px;display:flex;align-items:center;gap:8px}
+.shop-section-title::after{content:'';flex:1;height:1px;background:#2a2a4a}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.shop-card{background:var(--card);border:2px solid #2a2a4a;border-radius:12px;padding:14px;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.shop-card:hover{border-color:#ffd70060;transform:translateY(-3px);box-shadow:0 10px 28px #ffd70015}
+.shop-card.owned{border-color:#2a4a2a;background:#0a1a0a}
+.shop-card.equipped{border-color:var(--gold);background:#2a2000}
+.shop-card .sc-preview{width:90px;height:54px;border-radius:8px;margin:0 auto 10px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr}
+.sc-preview-cell{display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.shop-card .sc-name{font-size:.8rem;font-weight:700;color:#fff;margin-bottom:4px}
+.shop-card .sc-price{font-size:.75rem;color:var(--gold);font-weight:600}
+.shop-card .sc-badge{position:absolute;top:6px;right:6px;font-size:.58rem;padding:2px 6px;border-radius:8px;font-weight:700}
+.shop-card .sc-badge.owned{background:#2a4a2a;color:#00ff88}
+.shop-card .sc-badge.equipped{background:#2a2000;color:var(--gold)}
+
+/* Piece sets */
+.piece-preview-row{display:flex;justify-content:center;gap:4px;margin-bottom:8px;font-size:1.4rem}
+
+/* ═══ LEADERBOARD ═══ */
+#pgLeader{background:var(--dark);justify-content:flex-start;padding-top:0}
+.lb-header{width:100%;background:linear-gradient(135deg,#1a0a3a,#0a0a2a);padding:20px;text-align:center;border-bottom:1px solid #2a2a4a}
+.lb-header h2{font-size:1.5rem;font-weight:800;color:var(--gold)}
+.lb-content{width:100%;max-width:420px;padding:16px}
+.lb-my-stats{background:var(--card);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #2a2a4a}
+.lb-my-stats h3{font-size:.72rem;color:#8888aa;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-item{text-align:center;background:#0a0a2a;border-radius:8px;padding:10px 6px}
+.stat-val{font-size:1.1rem;font-weight:800;color:var(--gold)}
+.stat-lbl{font-size:.6rem;color:#666;margin-top:2px}
+.lb-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);
+  border-radius:10px;margin-bottom:8px;border:1px solid #2a2a4a}
+.lb-row.me{border-color:var(--gold);background:#2a2000}
+.lb-rank{width:26px;font-size:.95rem;font-weight:800;text-align:center;flex-shrink:0}
+.lb-name{flex:1;font-size:.88rem;font-weight:600;color:#fff}
+.lb-wins{font-size:.78rem;color:#888;margin-right:4px}
+.lb-pts{font-size:.88rem;font-weight:800;color:var(--gold)}
+
+/* ═══ RESULT ═══ */
+#pgResult{background:var(--dark);justify-content:center}
+.result-card{background:var(--card);border-radius:20px;padding:28px;max-width:320px;width:90%;
+  text-align:center;border:2px solid var(--gold);box-shadow:0 0 60px #ffd70025}
+.res-trophy{font-size:5rem;animation:trophyIn .5s ease}
+@keyframes trophyIn{from{transform:scale(0) rotate(-20deg)}to{transform:scale(1) rotate(0)}}
+.res-title{font-size:1.8rem;font-weight:900;margin:10px 0 6px}
+.res-title.win{background:linear-gradient(135deg,#ffd700,#ff9500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.res-title.draw{color:#88aaff}
+.res-title.lose{color:#ff4444}
+.res-coins{font-size:1rem;font-weight:700;margin:8px 0 16px}
+.res-coins.pos{color:var(--green)}
+.res-coins.neg{color:#ff4444}
+.res-stats{display:flex;justify-content:space-around;margin:12px 0;padding:12px;background:#0a0a2a;border-radius:10px}
+.rs-item{text-align:center}
+.rs-val{font-size:1rem;font-weight:800;color:var(--gold)}
+.rs-lbl{font-size:.65rem;color:#666;margin-top:2px}
+
+/* ═══ BOTTOM NAV ═══ */
+.bot-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0a0a1a;border-top:1px solid #2a2a4a;z-index:50;height:56px}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;cursor:pointer;color:#4a4a6a;font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;transition:all .2s}
+.bn-item.active{color:var(--gold)}
+.bn-icon{font-size:1.2rem}
+
+/* ═══ PROMOTION POPUP ═══ */
+#promoPopup{position:fixed;inset:0;background:#000000a0;z-index:600;display:none;align-items:center;justify-content:center}
+#promoPopup.open{display:flex}
+.promo-card{background:var(--card);border-radius:16px;padding:24px;border:2px solid var(--gold);text-align:center;max-width:280px;width:90%}
+.promo-card h3{color:var(--gold);font-size:1.1rem;font-weight:800;margin-bottom:14px}
+.promo-pieces{display:flex;gap:10px;justify-content:center;margin-bottom:16px;font-size:2.5rem}
+.promo-piece{cursor:pointer;padding:8px;border-radius:10px;border:2px solid #2a2a4a;transition:all .2s}
+.promo-piece:hover{border-color:var(--gold);background:#2a2000;transform:scale(1.1)}
+
+/* ═══ NOTIFICATIONS ═══ */
+.notif{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);
+  background:var(--gold);color:#000;padding:8px 20px;border-radius:20px;font-size:.82rem;font-weight:700;
+  z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+.notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:400px){
+  .menu-grid{width:260px}
+  .logo-title{font-size:2.2rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ SPLASH ════════ -->
+<div class="page active" id="pgSplash">
+  <div class="splash-bg" id="splashBg"></div>
+  <div style="height:40px"></div>
+  <div class="logo-wrap">
+    <div class="logo-chess">♟️</div>
+    <div class="logo-title">ChessMaster</div>
+    <div class="logo-sub">Play Daily · Win Coins · Rise to Glory</div>
+  </div>
+  <div class="coins-top">🪙 <span id="splashCoins">0</span> Coins</div>
+  <button class="daily-reward-btn" id="dailyBtn" onclick="openDailyReward()">
+    <div class="dr-left">
+      <span>🎁 Daily Reward</span>
+      <span class="dr-streak" id="streakText">Day 1 streak</span>
+    </div>
+    <span class="dr-badge" id="dailyBadge">CLAIM</span>
+  </button>
+  <div class="menu-grid">
+    <button class="mgbtn g1" onclick="showSetup('vs-ai')"><span class="mg-icon">🤖</span><span class="mg-label">vs Computer</span></button>
+    <button class="mgbtn g2" onclick="showSetup('2player')"><span class="mg-icon">🧑‍🤝‍🧑</span><span class="mg-label">2 Players</span></button>
+    <button class="mgbtn g3" onclick="showPage('pgShop')"><span class="mg-icon">🛒</span><span class="mg-label">Shop</span></button>
+    <button class="mgbtn g4" onclick="showPage('pgLeader')"><span class="mg-icon">🏆</span><span class="mg-label">Rankings</span></button>
+    <button class="mgbtn g5" onclick="showSetup('puzzle')"><span class="mg-icon">🧩</span><span class="mg-label">Puzzles</span></button>
+    <button class="mgbtn g6" onclick="showHowToPlay()"><span class="mg-icon">📖</span><span class="mg-label">How to Play</span></button>
+  </div>
+  <div style="height:70px"></div>
+  <div class="bot-nav">
+    <div class="bn-item active" onclick="showPage('pgSplash')"><span class="bn-icon">🏠</span>Home</div>
+    <div class="bn-item" onclick="showPage('pgShop')"><span class="bn-icon">🛒</span>Shop</div>
+    <div class="bn-item" onclick="showPage('pgLeader')"><span class="bn-icon">🏆</span>Ranks</div>
+  </div>
+</div>
+
+<!-- ════════ DAILY REWARD POPUP ════════ -->
+<div class="popup-ov" id="dailyPopup">
+  <div class="popup-card">
+    <h2>🎁 Daily Reward</h2>
+    <p id="dailyPopupSub">Come back every day for bigger rewards!</p>
+    <div class="reward-grid" id="rewardGrid"></div>
+    <button onclick="claimDaily()" id="claimBtn" style="width:100%;padding:13px;background:linear-gradient(135deg,#ffd700,#ff9500);border:none;border-radius:10px;font-size:.95rem;font-weight:800;cursor:pointer;color:#000">🎁 Claim Today's Reward!</button>
+    <button onclick="closePopup('dailyPopup')" style="width:100%;padding:10px;background:transparent;border:none;color:#666;font-size:.82rem;cursor:pointer;margin-top:8px">Maybe Later</button>
+  </div>
+</div>
+
+<!-- ════════ SETUP ════════ -->
+<div class="page" id="pgSetup">
+  <div class="setup-wrap">
+    <h2 id="setupTitle">⚙️ New Game</h2>
+    <div class="setup-section">
+      <h3>Game Mode</h3>
+      <div class="opt-row" id="modeOpts">
+        <div class="opt-b active" onclick="selOpt(this,'mode','vs-ai')">🤖 vs AI</div>
+        <div class="opt-b" onclick="selOpt(this,'mode','2player')">🧑‍🤝‍🧑 2 Players</div>
+      </div>
+    </div>
+    <div class="setup-section">
+      <h3>Difficulty</h3>
+      <div class="opt-row" id="diffOpts">
+        <div class="opt-b" onclick="selOpt(this,'diff','easy')">😊 Easy</div>
+        <div class="opt-b active" onclick="selOpt(this,'diff','medium')">😐 Medium</div>
+        <div class="opt-b" onclick="selOpt(this,'diff','hard')">😤 Hard</div>
+      </div>
+    </div>
+    <div class="setup-section">
+      <h3>Time Control</h3>
+      <div class="opt-row" id="timeOpts">
+        <div class="opt-b" onclick="selOpt(this,'time',180)">3 min</div>
+        <div class="opt-b active" onclick="selOpt(this,'time',300)">5 min</div>
+        <div class="opt-b" onclick="selOpt(this,'time',600)">10 min</div>
+        <div class="opt-b" onclick="selOpt(this,'time',0)">∞</div>
+      </div>
+    </div>
+    <div class="setup-section">
+      <h3>Player Names</h3>
+      <input class="name-inp" id="p1name" placeholder="Your name" maxlength="14"/>
+      <input class="name-inp" id="p2name" placeholder="Opponent" maxlength="14"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button onclick="showPage('pgSplash')" style="flex:1;padding:13px;border-radius:10px;background:#1a1a3a;border:1px solid #2a2a4a;color:#8888aa;font-size:.85rem;font-weight:700;cursor:pointer">← Back</button>
+      <button onclick="startGame()" style="flex:2;padding:13px;border-radius:10px;background:linear-gradient(135deg,#ffd700,#ff9500);border:none;color:#000;font-size:.95rem;font-weight:800;cursor:pointer">▶ Start Game</button>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- ════════ GAME ════════ -->
+<div class="page" id="pgGame">
+  <div class="game-hud">
+    <div class="hud-player" id="hudP2">
+      <div class="hp-avatar" id="hudAv2">♟</div>
+      <div><div class="hp-name" id="hudN2">Player 2</div><div class="hp-captured" id="hudCap2"></div></div>
+    </div>
+    <div class="hud-mid">
+      <div class="hud-turn" id="hudTurnLabel">WHITE'S TURN</div>
+      <div class="hud-timer" id="hudTimer">5:00</div>
+    </div>
+    <div class="hud-player" id="hudP1">
+      <div class="hp-avatar" id="hudAv1">♙</div>
+      <div><div class="hp-name" id="hudN1">You</div><div class="hp-captured" id="hudCap1"></div></div>
+    </div>
+  </div>
+  <div class="board-wrap">
+    <div id="chessBoard"></div>
+  </div>
+  <div class="move-history" id="moveHistory"></div>
+  <div class="game-controls">
+    <button class="gc-btn" onclick="undoMove()">↩ Undo</button>
+    <button class="gc-btn" onclick="offerDraw()">🤝 Draw</button>
+    <button class="gc-btn" onclick="flipBoard()">🔄 Flip</button>
+    <button class="gc-btn danger" onclick="resignGame()">🏳️ Resign</button>
+    <button class="gc-btn" onclick="showPage('pgSplash')">🏠</button>
+  </div>
+</div>
+
+<!-- ════════ RESULT ════════ -->
+<div class="page" id="pgResult">
+  <div class="result-card">
+    <div class="res-trophy" id="resTrophy">🏆</div>
+    <div class="res-title" id="resTitle">Checkmate!</div>
+    <div class="res-coins" id="resCoins">+80 🪙</div>
+    <div class="res-stats">
+      <div class="rs-item"><div class="rs-val" id="rs-moves">0</div><div class="rs-lbl">Moves</div></div>
+      <div class="rs-item"><div class="rs-val" id="rs-time">0:00</div><div class="rs-lbl">Time</div></div>
+      <div class="rs-item"><div class="rs-val" id="rs-captured">0</div><div class="rs-lbl">Captured</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+      <button onclick="startGame()" class="mgbtn g1" style="width:100%;flex-direction:row;border-radius:10px;padding:13px">🔄 Play Again</button>
+      <button onclick="showPage('pgShop')" class="mgbtn g3" style="width:100%;flex-direction:row;border-radius:10px;padding:13px">🛒 Shop</button>
+      <button onclick="showPage('pgSplash')" class="mgbtn wide" style="width:100%;border-radius:10px;padding:12px;font-size:.85rem">🏠 Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SHOP ════════ -->
+<div class="page" id="pgShop">
+  <div class="shop-header">
+    <h2>🛒 Chess Shop</h2>
+    <div class="shop-coins">🪙 <span id="shopCoins">0</span> Coins</div>
+  </div>
+  <div class="shop-content">
+    <div class="shop-section-title">🎨 Board Themes</div>
+    <div class="shop-grid" id="boardShopGrid"></div>
+    <div class="shop-section-title">♟️ Piece Sets</div>
+    <div class="shop-grid" id="pieceShopGrid"></div>
+    <div style="height:70px"></div>
+  </div>
+  <div class="bot-nav">
+    <div class="bn-item" onclick="showPage('pgSplash')"><span class="bn-icon">🏠</span>Home</div>
+    <div class="bn-item active"><span class="bn-icon">🛒</span>Shop</div>
+    <div class="bn-item" onclick="showPage('pgLeader')"><span class="bn-icon">🏆</span>Ranks</div>
+  </div>
+</div>
+
+<!-- ════════ LEADERBOARD ════════ -->
+<div class="page" id="pgLeader">
+  <div class="lb-header">
+    <h2>🏆 Rankings</h2>
+    <p style="font-size:.78rem;color:#8888aa;margin-top:4px">Top players by coins earned</p>
+  </div>
+  <div class="lb-content">
+    <div class="lb-my-stats">
+      <h3>My Statistics</h3>
+      <div class="stats-grid">
+        <div class="stat-item"><div class="stat-val" id="st-wins">0</div><div class="stat-lbl">Wins</div></div>
+        <div class="stat-item"><div class="stat-val" id="st-losses">0</div><div class="stat-lbl">Losses</div></div>
+        <div class="stat-item"><div class="stat-val" id="st-streak">0</div><div class="stat-lbl">Streak</div></div>
+        <div class="stat-item"><div class="stat-val" id="st-coins">0</div><div class="stat-lbl">🪙 Coins</div></div>
+      </div>
+    </div>
+    <div id="leaderList"></div>
+    <div style="height:70px"></div>
+  </div>
+  <div class="bot-nav">
+    <div class="bn-item" onclick="showPage('pgSplash')"><span class="bn-icon">🏠</span>Home</div>
+    <div class="bn-item" onclick="showPage('pgShop')"><span class="bn-icon">🛒</span>Shop</div>
+    <div class="bn-item active"><span class="bn-icon">🏆</span>Ranks</div>
+  </div>
+</div>
+
+<!-- PROMO POPUP -->
+<div id="promoPopup">
+  <div class="promo-card">
+    <h3>👑 Promote Pawn!</h3>
+    <p style="font-size:.8rem;color:#8888aa;margin-bottom:14px">Choose a piece to promote to:</p>
+    <div class="promo-pieces">
+      <div class="promo-piece" onclick="promoteTo('q')">♛</div>
+      <div class="promo-piece" onclick="promoteTo('r')">♜</div>
+      <div class="promo-piece" onclick="promoteTo('b')">♝</div>
+      <div class="promo-piece" onclick="promoteTo('n')">♞</div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════
+const S=(k,v)=>{try{localStorage.setItem('cm_'+k,JSON.stringify(v))}catch(e){}};
+const L=(k,d)=>{try{const v=localStorage.getItem('cm_'+k);return v!==null?JSON.parse(v):d}catch(e){return d}};
+
+let PD=L('pd',{name:'ChessMaster',coins:100,wins:0,losses:0,draws:0,streak:0,
+  lastLogin:'',loginStreak:0,totalGames:0,
+  ownedBoards:['classic'],ownedPieces:['classic'],
+  activeBoard:'classic',activePieces:'classic'});
+const SP=()=>S('pd',PD);
+
+// ══════════════════════════════════════════
+//  SHOP DATA
+// ══════════════════════════════════════════
+const BOARDS=[
+  {id:'classic',name:'Classic',price:0,lightColor:'#f0d9b5',darkColor:'#b58863',theme:''},
+  {id:'ocean',name:'Ocean Blue',price:150,lightColor:'#d4e8f0',darkColor:'#4a90b8',theme:'ocean'},
+  {id:'forest',name:'Forest',price:200,lightColor:'#d4e8c4',darkColor:'#4a8b4a',theme:'forest'},
+  {id:'purple',name:'Royal Purple',price:300,lightColor:'#e8d4f0',darkColor:'#8b4ab8',theme:'purple'},
+  {id:'gold',name:'Golden',price:400,lightColor:'#fff3c4',darkColor:'#c8a020',theme:'gold'},
+  {id:'neon',name:'Neon Dark',price:500,lightColor:'#1a0a3a',darkColor:'#3a0a6a',theme:'neon'},
+  {id:'night',name:'Midnight',price:350,lightColor:'#2a2a4a',darkColor:'#1a1a2a',theme:'night'},
+  {id:'fire',name:'Fire',price:600,lightColor:'#fff0d4',darkColor:'#c84a00',theme:'fire'},
+  {id:'ice',name:'Ice Crystal',price:600,lightColor:'#e0f4ff',darkColor:'#4a9abc',theme:'ice'},
+];
+
+const PIECE_SETS=[
+  {id:'classic',name:'Classic',price:0,pieces:{wp:'♙',wr:'♖',wn:'♘',wb:'♗',wq:'♕',wk:'♔',bp:'♟',br:'♜',bn:'♞',bb:'♝',bq:'♛',bk:'♚'}},
+  {id:'color1',name:'Fire & Ice',price:250,pieces:{wp:'🔥',wr:'🏰',wn:'🐴',wb:'⛪',wq:'👑',wk:'🤴',bp:'❄️',br:'🗼',bn:'🦄',bb:'💎',bq:'👸',bk:'🧊'}},
+  {id:'color2',name:'Animals',price:300,pieces:{wp:'🐣',wr:'🦁',wn:'🐬',wb:'🦋',wq:'🦚',wk:'🦅',bp:'🐧',br:'🐻',bn:'🦊',bb:'🦉',bq:'🐉',bk:'🦈'}},
+  {id:'color3',name:'Space',price:400,pieces:{wp:'⭐',wr:'🚀',wn:'🛸',wb:'🌙',wq:'☀️',wk:'🌟',bp:'💫',br:'🌌',bn:'🪐',bb:'🌠',bq:'🌙',bk:'🔮'}},
+  {id:'color4',name:'Emoji Fun',price:350,pieces:{wp:'😊',wr:'🏰',wn:'🐴',wb:'🌸',wq:'👑',wk:'😎',bp:'😈',br:'🔥',bn:'🦄',bb:'💀',bq:'🌙',bk:'🤡'}},
+];
+
+// ══════════════════════════════════════════
+//  CHESS ENGINE
+// ══════════════════════════════════════════
+// Board: 8x8 array [row][col], row 0=black side, row 7=white side
+// Piece format: 'wp','wn','wb','wr','wq','wk','bp','bn','bb','br','bq','bk', null
+let board=[], selectedCell=null, currentTurn='w', gameActive=false;
+let moveHistory=[], capturedW=[], capturedB=[];
+let enPassantTarget=null, castlingRights={wk:true,wq:true,bk:true,bq:true};
+let boardFlipped=false, promotionCallback=null;
+let gameSetup={mode:'vs-ai',diff:'medium',time:300};
+let timers={w:300,b:300};
+let timerInterval=null, gameStartTime=Date.now(), totalMoves=0;
+let lastMove=null, inCheck=false;
+let aiMode=false;
+
+function initBoard(){
+  board=Array(8).fill(null).map(()=>Array(8).fill(null));
+  // Black pieces (top)
+  board[0]=['br','bn','bb','bq','bk','bb','bn','br'];
+  board[1]=Array(8).fill('bp');
+  // White pieces (bottom)
+  board[6]=Array(8).fill('wp');
+  board[7]=['wr','wn','wb','wq','wk','wb','wn','wr'];
+  selectedCell=null; currentTurn='w';
+  moveHistory=[]; capturedW=[]; capturedB=[];
+  enPassantTarget=null;
+  castlingRights={wk:true,wq:true,bk:true,bq:true};
+  lastMove=null; inCheck=false; totalMoves=0;
+  timers.w=gameSetup.time||300; timers.b=gameSetup.time||300;
+}
+
+// Piece symbols
+function getPieceSet(){
+  return(PIECE_SETS.find(p=>p.id===PD.activePieces)||PIECE_SETS[0]).pieces;
+}
+function pieceSymbol(p){
+  if(!p)return'';
+  const ps=getPieceSet();
+  return ps[p]||{wp:'♙',wr:'♖',wn:'♘',wb:'♗',wq:'♕',wk:'♔',bp:'♟',br:'♜',bn:'♞',bb:'♝',bq:'♛',bk:'♚'}[p]||'';
+}
+function pieceColor(p){return p?p[0]:null}
+
+// ══════════════════════════════════════════
+//  MOVE GENERATION
+// ══════════════════════════════════════════
+function isInBounds(r,c){return r>=0&&r<8&&c>=0&&c<8}
+function isEmpty(r,c,b){return b?!b[r][c]:!board[r][c]}
+function isEnemy(r,c,color,b){const p=(b||board)[r][c];return p&&p[0]!==color}
+function isFriend(r,c,color,b){const p=(b||board)[r][c];return p&&p[0]===color}
+
+function getPawnMoves(r,c,color,b){
+  const brd=b||board;
+  const moves=[];
+  const dir=color==='w'?-1:1;
+  const startRow=color==='w'?6:1;
+  // Forward
+  if(isInBounds(r+dir,c)&&!brd[r+dir][c]){
+    moves.push([r+dir,c]);
+    if(r===startRow&&!brd[r+2*dir][c]) moves.push([r+2*dir,c]);
+  }
+  // Captures
+  [-1,1].forEach(dc=>{
+    if(isInBounds(r+dir,c+dc)){
+      if(isEnemy(r+dir,c+dc,color,brd)) moves.push([r+dir,c+dc]);
+      // En passant
+      if(enPassantTarget&&enPassantTarget[0]===r+dir&&enPassantTarget[1]===c+dc) moves.push([r+dir,c+dc]);
+    }
+  });
+  return moves;
+}
+
+function getSlidingMoves(r,c,color,dirs,b){
+  const brd=b||board; const moves=[];
+  dirs.forEach(([dr,dc])=>{
+    let nr=r+dr,nc=c+dc;
+    while(isInBounds(nr,nc)){
+      if(isFriend(nr,nc,color,brd)) break;
+      moves.push([nr,nc]);
+      if(isEnemy(nr,nc,color,brd)) break;
+      nr+=dr; nc+=dc;
+    }
+  });
+  return moves;
+}
+
+function getKnightMoves(r,c,color,b){
+  const brd=b||board;
+  return[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]
+    .filter(([dr,dc])=>isInBounds(r+dr,c+dc)&&!isFriend(r+dr,c+dc,color,brd))
+    .map(([dr,dc])=>[r+dr,c+dc]);
+}
+
+function getKingMoves(r,c,color,b){
+  const brd=b||board;
+  const moves=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]
+    .filter(([dr,dc])=>isInBounds(r+dr,c+dc)&&!isFriend(r+dr,c+dc,color,brd))
+    .map(([dr,dc])=>[r+dr,c+dc]);
+  // Castling
+  if(!b){
+    const rank=color==='w'?7:0;
+    if(r===rank&&c===4){
+      if(castlingRights[color+'k']&&!brd[rank][5]&&!brd[rank][6]&&!isSquareAttacked(rank,4,color==='w'?'b':'w')&&!isSquareAttacked(rank,5,color==='w'?'b':'w')&&!isSquareAttacked(rank,6,color==='w'?'b':'w'))
+        moves.push([rank,6]);
+      if(castlingRights[color+'q']&&!brd[rank][3]&&!brd[rank][2]&&!brd[rank][1]&&!isSquareAttacked(rank,4,color==='w'?'b':'w')&&!isSquareAttacked(rank,3,color==='w'?'b':'w')&&!isSquareAttacked(rank,2,color==='w'?'b':'w'))
+        moves.push([rank,2]);
+    }
+  }
+  return moves;
+}
+
+function getRawMoves(r,c,b){
+  const brd=b||board;
+  const p=brd[r][c]; if(!p)return[];
+  const color=p[0],type=p[1];
+  switch(type){
+    case'p':return getPawnMoves(r,c,color,brd);
+    case'r':return getSlidingMoves(r,c,color,[[0,1],[0,-1],[1,0],[-1,0]],brd);
+    case'b':return getSlidingMoves(r,c,color,[[1,1],[1,-1],[-1,1],[-1,-1]],brd);
+    case'q':return getSlidingMoves(r,c,color,[[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]],brd);
+    case'n':return getKnightMoves(r,c,color,brd);
+    case'k':return getKingMoves(r,c,color,brd);
+    default:return[];
+  }
+}
+
+function findKing(color,b){
+  const brd=b||board;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(brd[r][c]===color+'k')return[r,c];
+  return null;
+}
+
+function isSquareAttacked(r,c,byColor,b){
+  const brd=b||board;
+  for(let ar=0;ar<8;ar++)for(let ac=0;ac<8;ac++){
+    const p=brd[ar][ac];
+    if(p&&p[0]===byColor){
+      const moves=p[1]==='k'?
+        [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].filter(([dr,dc])=>isInBounds(ar+dr,ac+dc)).map(([dr,dc])=>[ar+dr,ac+dc]):
+        getRawMoves(ar,ac,brd);
+      if(moves.some(([mr,mc])=>mr===r&&mc===c))return true;
+    }
+  }
+  return false;
+}
+
+function isKingInCheck(color,b){
+  const k=findKing(color,b);
+  return k?isSquareAttacked(k[0],k[1],color==='w'?'b':'w',b):false;
+}
+
+function getLegalMoves(r,c){
+  const raw=getRawMoves(r,c);
+  const color=board[r][c][0];
+  return raw.filter(([tr,tc])=>{
+    const copy=board.map(row=>[...row]);
+    copy[tr][tc]=copy[r][c]; copy[r][c]=null;
+    return!isKingInCheck(color,copy);
+  });
+}
+
+function hasAnyLegalMove(color){
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++)
+    if(board[r][c]&&board[r][c][0]===color&&getLegalMoves(r,c).length>0)return true;
+  return false;
+}
+
+// ══════════════════════════════════════════
+//  MAKE MOVE
+// ══════════════════════════════════════════
+function makeMove(fr,fc,tr,tc,promoChoice){
+  const piece=board[fr][fc]; if(!piece)return false;
+  const color=piece[0],type=piece[1];
+  const captured=board[tr][tc];
+  let notation='';
+  let special='';
+
+  // En passant capture
+  if(type==='p'&&enPassantTarget&&tr===enPassantTarget[0]&&tc===enPassantTarget[1]&&!captured){
+    const capturedRow=color==='w'?tr+1:tr-1;
+    const epCap=board[capturedRow][tc];
+    board[capturedRow][tc]=null;
+    if(color==='w')capturedB.push(epCap);else capturedW.push(epCap);
+    special='ep';
+  }
+
+  // Castling
+  if(type==='k'&&Math.abs(tc-fc)===2){
+    const rank=fr;
+    if(tc===6){board[rank][5]=board[rank][7];board[rank][7]=null;special='castleK';}
+    else{board[rank][3]=board[rank][0];board[rank][0]=null;special='castleQ';}
+  }
+
+  // Update castling rights
+  if(type==='k'){castlingRights[color+'k']=false;castlingRights[color+'q']=false;}
+  if(type==='r'&&fc===7)castlingRights[color+'k']=false;
+  if(type==='r'&&fc===0)castlingRights[color+'q']=false;
+
+  // En passant target
+  enPassantTarget=null;
+  if(type==='p'&&Math.abs(tr-fr)===2)enPassantTarget=[(fr+tr)/2,fc];
+
+  // Capture
+  if(captured){
+    if(color==='w')capturedB.push(captured);else capturedW.push(captured);
+  }
+
+  // Move
+  board[tr][tc]=piece;
+  board[fr][fc]=null;
+
+  // Pawn promotion
+  const promoRow=color==='w'?0:7;
+  if(type==='p'&&tr===promoRow){
+    if(promoChoice){
+      board[tr][tc]=color+promoChoice;
+    }else{
+      // Trigger promotion UI
+      promotionCallback=(choice)=>{
+        board[tr][tc]=color+choice;
+        renderBoard();
+        postMove(fr,fc,tr,tc,color,notation);
+      };
+      renderBoard();
+      document.getElementById('promoPopup').classList.add('open');
+      return true;
+    }
+  }
+
+  notation=getNotation(fr,fc,tr,tc,piece,captured,special);
+  moveHistory.push({fr,fc,tr,tc,piece,captured,special,notation,
+    castlingRights:{...castlingRights},enPassant:enPassantTarget});
+  lastMove={fr,fc,tr,tc};
+  totalMoves++;
+  postMove(fr,fc,tr,tc,color,notation);
+  return true;
+}
+
+function getNotation(fr,fc,tr,tc,piece,captured,special){
+  if(special==='castleK')return'O-O';
+  if(special==='castleQ')return'O-O-O';
+  const files='abcdefgh';
+  const type=piece[1].toUpperCase();
+  const pStr=type==='P'?'':type;
+  const capStr=captured||special==='ep'?'x':'';
+  const dest=files[tc]+(8-tr);
+  return(pStr||'')+capStr+dest;
+}
+
+function postMove(fr,fc,tr,tc,color,notation){
+  const opp=color==='w'?'b':'w';
+  inCheck=isKingInCheck(opp);
+  const noMoves=!hasAnyLegalMove(opp);
+  currentTurn=opp;
+
+  if(noMoves){
+    if(inCheck){endGame('checkmate',color);}
+    else{endGame('stalemate','draw');}
+    renderBoard();
+    updateHUD();
+    return;
+  }
+
+  renderBoard();
+  updateHUD();
+  updateMoveHistory();
+
+  if(aiMode&&currentTurn==='b'){
+    setTimeout(doAIMove,600);
+  }
+}
+
+function undoMove(){
+  if(moveHistory.length===0)return;
+  const last=moveHistory.pop();
+  board[last.fr][last.fc]=last.piece;
+  board[last.tr][last.tc]=last.captured||null;
+  if(last.special==='castleK'){
+    const rank=last.fr;
+    board[rank][7]=board[rank][5];board[rank][5]=null;
+  }
+  if(last.special==='castleQ'){
+    const rank=last.fr;
+    board[rank][0]=board[rank][3];board[rank][3]=null;
+  }
+  if(last.special==='ep'){
+    const capRow=last.piece[0]==='w'?last.tr+1:last.tr-1;
+    board[capRow][last.tc]=(currentTurn==='w'?'b':'w')+'p';
+  }
+  const color=last.piece[0];
+  if(color==='w')capturedB=capturedB.filter((_,i)=>i<capturedB.length-1);
+  else capturedW=capturedW.filter((_,i)=>i<capturedW.length-1);
+  castlingRights={...last.castlingRights};
+  enPassantTarget=last.enPassant;
+  lastMove=moveHistory.length>0?{fr:moveHistory[moveHistory.length-1].fr,fc:moveHistory[moveHistory.length-1].fc,tr:moveHistory[moveHistory.length-1].tr,tc:moveHistory[moveHistory.length-1].tc}:null;
+  currentTurn=color;
+  inCheck=isKingInCheck(currentTurn);
+  totalMoves=Math.max(0,totalMoves-1);
+  renderBoard();updateHUD();updateMoveHistory();
+  showNotif('↩ Move undone');
+}
+
+// ══════════════════════════════════════════
+//  AI (Minimax with Alpha-Beta)
+// ══════════════════════════════════════════
+const PIECE_VALUES={p:10,n:30,b:32,r:50,q:90,k:900};
+const POS_BONUS={
+  p:[[0,0,0,0,0,0,0,0],[5,5,5,5,5,5,5,5],[1,1,2,3,3,2,1,1],[.5,.5,1,2.5,2.5,1,.5,.5],[0,0,0,2,2,0,0,0],[.5,-.5,-1,0,0,-1,-.5,.5],[.5,1,1,-2,-2,1,1,.5],[0,0,0,0,0,0,0,0]],
+  n:[[-5,-4,-3,-3,-3,-3,-4,-5],[-4,-2,0,0,0,0,-2,-4],[-3,0,1,1.5,1.5,1,0,-3],[-3,.5,1.5,2,2,1.5,.5,-3],[-3,0,1.5,2,2,1.5,0,-3],[-3,.5,1,1.5,1.5,1,.5,-3],[-4,-2,0,.5,.5,0,-2,-4],[-5,-4,-3,-3,-3,-3,-4,-5]],
+};
+
+function evalBoard(){
+  let score=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=board[r][c];if(!p)continue;
+    const color=p[0],type=p[1];
+    const val=PIECE_VALUES[type]||0;
+    const posBonus=(POS_BONUS[type]?POS_BONUS[type][color==='b'?r:7-r][color==='b'?c:7-c]:0)||0;
+    score+=(color==='b'?1:-1)*(val+posBonus);
+  }
+  return score;
+}
+
+function minimax(depth,alpha,beta,maximizing){
+  if(depth===0)return evalBoard();
+  const color=maximizing?'b':'w';
+  const moves=getAllMoves(color);
+  if(moves.length===0){
+    if(isKingInCheck(color))return maximizing?-1000:1000;
+    return 0;
+  }
+  if(maximizing){
+    let best=-Infinity;
+    for(const[fr,fc,tr,tc]of moves){
+      const saved=board.map(row=>[...row]);
+      const savedEP=enPassantTarget;
+      const savedCap={w:[...capturedW],b:[...capturedB]};
+      if(!board[fr][fc])continue;
+      board[tr][tc]=board[fr][fc];board[fr][fc]=null;
+      const v=minimax(depth-1,alpha,beta,false);
+      board=saved;enPassantTarget=savedEP;capturedW=savedCap.w;capturedB=savedCap.b;
+      best=Math.max(best,v);alpha=Math.max(alpha,v);
+      if(beta<=alpha)break;
+    }
+    return best;
+  }else{
+    let best=Infinity;
+    for(const[fr,fc,tr,tc]of moves){
+      const saved=board.map(row=>[...row]);
+      const savedEP=enPassantTarget;
+      const savedCap={w:[...capturedW],b:[...capturedB]};
+      if(!board[fr][fc])continue;
+      board[tr][tc]=board[fr][fc];board[fr][fc]=null;
+      const v=minimax(depth-1,alpha,beta,true);
+      board=saved;enPassantTarget=savedEP;capturedW=savedCap.w;capturedB=savedCap.b;
+      best=Math.min(best,v);beta=Math.min(beta,v);
+      if(beta<=alpha)break;
+    }
+    return best;
+  }
+}
+
+function getAllMoves(color){
+  const moves=[];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(board[r][c]&&board[r][c][0]===color){
+      getLegalMoves(r,c).forEach(([tr,tc])=>moves.push([r,c,tr,tc]));
+    }
+  }
+  return moves;
+}
+
+function doAIMove(){
+  if(!gameActive||currentTurn!=='b')return;
+  const depth=gameSetup.diff==='easy'?1:gameSetup.diff==='hard'?3:2;
+  const moves=getAllMoves('b');
+  if(moves.length===0)return;
+
+  let best=-Infinity,bestMove=null;
+  for(const[fr,fc,tr,tc]of moves){
+    const saved=board.map(row=>[...row]);
+    const savedEP=enPassantTarget;
+    const savedCR={...castlingRights};
+    const savedCapW=[...capturedW],savedCapB=[...capturedB];
+    if(!board[fr][fc])continue;
+    board[tr][tc]=board[fr][fc];board[fr][fc]=null;
+    const v=minimax(depth-1,-Infinity,Infinity,false);
+    board=saved;enPassantTarget=savedEP;castlingRights=savedCR;
+    capturedW=savedCapW;capturedB=savedCapB;
+    if(v>best){best=v;bestMove=[fr,fc,tr,tc];}
+  }
+
+  if(bestMove){
+    selectedCell=null;
+    makeMove(bestMove[0],bestMove[1],bestMove[2],bestMove[3]);
+  }
+}
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+let validMoves=[];
+function renderBoard(){
+  const boardEl=document.getElementById('chessBoard');
+  if(!boardEl)return;
+  const boardData=BOARDS.find(b=>b.id===PD.activeBoard)||BOARDS[0];
+  boardEl.className=boardData.theme?'theme-'+boardData.theme:'';
+
+  boardEl.innerHTML='';
+  const files='abcdefgh';
+
+  for(let vr=0;vr<8;vr++){
+    for(let vc=0;vc<8;vc++){
+      const r=boardFlipped?7-vr:vr;
+      const c=boardFlipped?7-vc:vc;
+      const isLight=(r+c)%2===0;
+      const cell=document.createElement('div');
+      cell.className='cell '+(isLight?'light':'dark');
+
+      // Highlights
+      if(lastMove&&((r===lastMove.fr&&c===lastMove.fc)||(r===lastMove.tr&&c===lastMove.tc)))
+        cell.classList.add('last-move');
+      if(selectedCell&&selectedCell[0]===r&&selectedCell[1]===c)
+        cell.classList.add('selected');
+      if(validMoves.some(([mr,mc])=>mr===r&&mc===c)){
+        if(board[r][c])cell.classList.add('valid-capture');
+        else cell.classList.add('valid-move');
+      }
+      if(inCheck){
+        const kingPos=findKing(currentTurn);
+        if(kingPos&&kingPos[0]===r&&kingPos[1]===c)cell.classList.add('check');
+      }
+
+      // Board labels
+      if(vc===0){const lbl=document.createElement('span');lbl.className='cell-label rank';lbl.textContent=8-r;cell.appendChild(lbl);}
+      if(vr===7){const lbl=document.createElement('span');lbl.className='cell-label file';lbl.textContent=files[c];cell.appendChild(lbl);}
+
+      // Piece
+      if(board[r][c]){
+        const piece=document.createElement('div');
+        piece.className='chess-piece';
+        piece.textContent=pieceSymbol(board[r][c]);
+        cell.appendChild(piece);
+      }
+
+      cell.addEventListener('click',()=>handleCellClick(r,c));
+      cell.addEventListener('touchend',(e)=>{e.preventDefault();handleCellClick(r,c);},{passive:false});
+      boardEl.appendChild(cell);
+    }
+  }
+
+  // Captured strips
+  document.getElementById('hudCap1').textContent=capturedW.map(p=>pieceSymbol(p)).join('');
+  document.getElementById('hudCap2').textContent=capturedB.map(p=>pieceSymbol(p)).join('');
+}
+
+function handleCellClick(r,c){
+  if(!gameActive||paused)return;
+  if(aiMode&&currentTurn==='b')return;
+
+  const piece=board[r][c];
+
+  if(selectedCell){
+    const[sr,sc]=selectedCell;
+    const isValid=validMoves.some(([mr,mc])=>mr===r&&mc===c);
+    if(isValid){
+      selectedCell=null;validMoves=[];
+      makeMove(sr,sc,r,c);
+      return;
+    }
+    // Deselect or select new piece
+    selectedCell=null;validMoves=[];
+  }
+
+  if(piece&&piece[0]===currentTurn){
+    selectedCell=[r,c];
+    validMoves=getLegalMoves(r,c);
+  }
+  renderBoard();
+}
+
+function promoteTo(choice){
+  document.getElementById('promoPopup').classList.remove('open');
+  if(promotionCallback){promotionCallback(choice);promotionCallback=null;}
+}
+
+function flipBoard(){boardFlipped=!boardFlipped;renderBoard();}
+
+function offerDraw(){
+  if(confirm('Offer draw to opponent?'))endGame('draw','draw');
+}
+function resignGame(){
+  if(confirm('Are you sure you want to resign?'))endGame('resign',currentTurn==='w'?'b':'w');
+}
+
+// ══════════════════════════════════════════
+//  GAME FLOW
+// ══════════════════════════════════════════
+let paused=false;
+
+function endGame(reason,winner){
+  gameActive=false;
+  clearInterval(timerInterval);
+  const isPlayerWin=winner==='w';
+  const isDraw=winner==='draw';
+  let coinsChange=isDraw?20:isPlayerWin?80:-30;
+
+  PD.coins=Math.max(0,PD.coins+coinsChange);
+  if(isDraw)PD.draws++;
+  else if(isPlayerWin){PD.wins++;PD.streak++;}
+  else{PD.losses++;PD.streak=0;}
+  PD.totalGames++;
+  SP();
+  updateLeaderboard(PD.name,PD.coins,PD.wins);
+
+  const timeSpent=timers.w?Math.max(0,(gameSetup.time||300)-timers.w):totalMoves*3;
+  const m=Math.floor(timeSpent/60),s=timeSpent%60;
+
+  document.getElementById('resTrophy').textContent=isDraw?'🤝':isPlayerWin?'🏆':'😞';
+  document.getElementById('resTitle').textContent=isDraw?'Draw!':reason==='checkmate'?(isPlayerWin?'Checkmate! You Win!':'Checkmate! You Lose!'):reason==='stalemate'?'Stalemate!':reason==='resign'?(isPlayerWin?'Opponent Resigned!':'You Resigned'):'Game Over';
+  document.getElementById('resTitle').className='res-title '+(isDraw?'draw':isPlayerWin?'win':'lose');
+  document.getElementById('resCoins').textContent=(coinsChange>0?'+':'')+coinsChange+' 🪙 coins';
+  document.getElementById('resCoins').className='res-coins '+(coinsChange>=0?'pos':'neg');
+  document.getElementById('rs-moves').textContent=totalMoves;
+  document.getElementById('rs-time').textContent=m+':'+(s<10?'0':'')+s;
+  document.getElementById('rs-captured').textContent=capturedW.length+capturedB.length;
+
+  setTimeout(()=>showPage('pgResult'),800);
+}
+
+// ══════════════════════════════════════════
+//  HUD & TIMER
+// ══════════════════════════════════════════
+function updateHUD(){
+  const names=gameSetup.players||['You','Opponent'];
+  document.getElementById('hudN1').textContent=names[0]||'You';
+  document.getElementById('hudN2').textContent=gameSetup.mode==='vs-ai'?'🤖 AI Bot':(names[1]||'Opponent');
+  document.getElementById('hudAv1').textContent='♙';
+  document.getElementById('hudAv2').textContent='♟';
+  document.getElementById('hudP1').classList.toggle('active',currentTurn==='w');
+  document.getElementById('hudP2').classList.toggle('active',currentTurn==='b');
+  document.getElementById('hudTurnLabel').textContent=(currentTurn==='w'?'WHITE':'BLACK')+"'S TURN";
+  if(inCheck)showNotif('⚠️ Check!');
+}
+
+function startTimer(){
+  clearInterval(timerInterval);
+  if(!gameSetup.time)return;
+  timerInterval=setInterval(()=>{
+    if(!gameActive||paused)return;
+    timers[currentTurn]--;
+    const t=timers[currentTurn];
+    const m=Math.floor(t/60),s=t%60;
+    const str=m+':'+(s<10?'0':'')+s;
+    document.getElementById('hudTimer').textContent=str;
+    document.getElementById('hudTimer').className='hud-timer'+(t<=30?' warn':'');
+    if(t<=0){clearInterval(timerInterval);endGame('timeout',currentTurn==='w'?'b':'w');}
+  },1000);
+}
+
+function updateMoveHistory(){
+  const el=document.getElementById('moveHistory');
+  const pairs=[];
+  for(let i=0;i<moveHistory.length;i+=2){
+    const mn=Math.floor(i/2)+1;
+    pairs.push(`${mn}. ${moveHistory[i].notation} ${moveHistory[i+1]?moveHistory[i+1].notation:''}`);
+  }
+  el.innerHTML=pairs.map(p=>`<span class="move-item">${p}</span>`).join('');
+  el.scrollLeft=el.scrollWidth;
+}
+
+// ══════════════════════════════════════════
+//  DAILY REWARD
+// ══════════════════════════════════════════
+const DAILY_REWARDS=[10,15,20,25,30,40,60];
+
+function openDailyReward(){
+  const today=new Date().toDateString();
+  const claimed=PD.lastLogin===today;
+  document.getElementById('dailyPopupSub').textContent=claimed?'Come back tomorrow for more rewards!':'Claim your daily reward!';
+  document.getElementById('claimBtn').disabled=claimed;
+  document.getElementById('claimBtn').textContent=claimed?'✅ Already Claimed Today!':'🎁 Claim Today\'s Reward!';
+  document.getElementById('claimBtn').style.opacity=claimed?.5:1;
+  renderRewardGrid();
+  document.getElementById('dailyPopup').classList.add('open');
+}
+
+function renderRewardGrid(){
+  const today=new Date().toDateString();
+  const streak=PD.loginStreak||0;
+  const claimed=PD.lastLogin===today;
+  const grid=document.getElementById('rewardGrid');
+  grid.innerHTML=DAILY_REWARDS.map((r,i)=>`
+    <div class="reward-day ${i<streak-(claimed?1:0)?'collected':i===streak-(claimed?1:0)&&!claimed?'today':i===streak-1&&claimed?'collected':''}">
+      <div class="rd-day">Day ${i+1}</div>
+      <div class="rd-coin">${i===6?'💎':'🪙'}</div>
+      <div class="rd-amt">+${r}</div>
+    </div>`).join('');
+}
+
+function claimDaily(){
+  const today=new Date().toDateString();
+  if(PD.lastLogin===today){showNotif('Already claimed today! Come back tomorrow 😊');return;}
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  if(PD.lastLogin===yesterday){PD.loginStreak=(PD.loginStreak||0)+1;}
+  else{PD.loginStreak=1;}
+  PD.loginStreak=Math.min(PD.loginStreak,7);
+  const reward=DAILY_REWARDS[PD.loginStreak-1]||10;
+  PD.coins+=reward;
+  PD.lastLogin=today;
+  SP();
+  closePopup('dailyPopup');
+  showNotif(`🎁 Claimed! +${reward} 🪙 coins! Day ${PD.loginStreak} streak!`);
+  updateSplash();
+  document.getElementById('dailyBadge').textContent='✅ Done';
+  document.getElementById('streakText').textContent=`Day ${PD.loginStreak} streak 🔥`;
+}
+
+function closePopup(id){document.getElementById(id).classList.remove('open');}
+
+// ══════════════════════════════════════════
+//  SHOP
+// ══════════════════════════════════════════
+function renderShop(){
+  document.getElementById('shopCoins').textContent=PD.coins;
+  const boardGrid=document.getElementById('boardShopGrid');
+  boardGrid.innerHTML=BOARDS.map(b=>{
+    const owned=PD.ownedBoards.includes(b.id);
+    const active=PD.activeBoard===b.id;
+    return`<div class="shop-card ${active?'equipped':owned?'owned':''}" onclick="buyItem('board','${b.id}',${b.price})">
+      ${active?'<span class="sc-badge equipped">Equipped</span>':owned?'<span class="sc-badge owned">Owned</span>':''}
+      <div class="sc-preview"><div class="sc-preview-cell" style="background:${b.lightColor}">♙</div><div class="sc-preview-cell" style="background:${b.darkColor}">♟</div><div class="sc-preview-cell" style="background:${b.darkColor}">♟</div><div class="sc-preview-cell" style="background:${b.lightColor}">♙</div></div>
+      <div class="sc-name">${b.name}</div>
+      <div class="sc-price">${b.price===0?'🆓 Free':'🪙 '+b.price}</div>
+    </div>`;
+  }).join('');
+
+  const pieceGrid=document.getElementById('pieceShopGrid');
+  pieceGrid.innerHTML=PIECE_SETS.map(ps=>{
+    const owned=PD.ownedPieces.includes(ps.id);
+    const active=PD.activePieces===ps.id;
+    return`<div class="shop-card ${active?'equipped':owned?'owned':''}" onclick="buyItem('piece','${ps.id}',${ps.price})">
+      ${active?'<span class="sc-badge equipped">Equipped</span>':owned?'<span class="sc-badge owned">Owned</span>':''}
+      <div style="font-size:1.5rem;text-align:center;margin-bottom:8px">${ps.pieces.wk} ${ps.pieces.bk}</div>
+      <div style="font-size:.9rem;margin-bottom:4px">${ps.pieces.wq} ${ps.pieces.bq}</div>
+      <div class="sc-name">${ps.name}</div>
+      <div class="sc-price">${ps.price===0?'🆓 Free':'🪙 '+ps.price}</div>
+    </div>`;
+  }).join('');
+}
+
+function buyItem(type,id,price){
+  const ownedKey=type==='board'?'ownedBoards':'ownedPieces';
+  const activeKey=type==='board'?'activeBoard':'activePieces';
+  if(PD[ownedKey].includes(id)){
+    PD[activeKey]=id;SP();
+    showNotif(`✅ ${type==='board'?'Board':'Piece set'} equipped!`);
+    renderShop();
+  }else if(PD.coins>=price){
+    PD.coins-=price;PD[ownedKey].push(id);PD[activeKey]=id;SP();
+    showNotif(`🎉 Purchased & equipped!`);
+    renderShop();
+  }else{
+    showNotif(`❌ Need ${price-PD.coins} more coins! Win games to earn!`);
+  }
+}
+
+// ══════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════
+function updateLeaderboard(name,coins,wins){
+  let lb=L('lb',[]);
+  const idx=lb.findIndex(e=>e.name===name);
+  if(idx>=0){lb[idx]={name,coins,wins};}
+  else lb.push({name,coins,wins});
+  lb.sort((a,b)=>b.coins-a.coins);
+  lb=lb.slice(0,20);
+  S('lb',lb);
+}
+
+function renderLeader(){
+  document.getElementById('st-wins').textContent=PD.wins;
+  document.getElementById('st-losses').textContent=PD.losses;
+  document.getElementById('st-streak').textContent=(PD.streak||0)+'🔥';
+  document.getElementById('st-coins').textContent=PD.coins;
+  updateLeaderboard(PD.name,PD.coins,PD.wins);
+  const lb=L('lb',[]);
+  const medals=['🥇','🥈','🥉'];
+  const el=document.getElementById('leaderList');
+  if(lb.length===0){el.innerHTML='<div style="text-align:center;color:#555;padding:40px;font-size:.85rem">No rankings yet! Play a game first. 🎮</div>';return;}
+  el.innerHTML=lb.slice(0,10).map((p,i)=>`
+    <div class="lb-row ${p.name===PD.name?'me':''}">
+      <span class="lb-rank">${i<3?medals[i]:(i+1)}</span>
+      <span class="lb-name">${p.name}</span>
+      <span class="lb-wins">W:${p.wins||0}</span>
+      <span class="lb-pts">🪙${p.coins}</span>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+//  NAVIGATION & SETUP
+// ══════════════════════════════════════════
+let setupState={mode:'vs-ai',diff:'medium',time:300};
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='pgShop')renderShop();
+  if(id==='pgLeader')renderLeader();
+  if(id==='pgSplash')updateSplash();
+}
+
+function showSetup(mode){
+  if(mode==='puzzle'){showNotif('🧩 Puzzles coming soon!');return;}
+  setupState.mode=mode;
+  document.getElementById('p2name').value=mode==='vs-ai'?'AI Bot':'Player 2';
+  document.getElementById('p2name').readOnly=mode==='vs-ai';
+  document.getElementById('p2name').style.opacity=mode==='vs-ai'?.5:1;
+  // Sync mode buttons
+  document.querySelectorAll('#modeOpts .opt-b').forEach(b=>b.classList.remove('active'));
+  const modeMap={'vs-ai':0,'2player':1};
+  const modeBtn=document.querySelectorAll('#modeOpts .opt-b')[modeMap[mode]||0];
+  if(modeBtn)modeBtn.classList.add('active');
+  showPage('pgSetup');
+}
+
+function selOpt(el,group,val){
+  el.parentElement.querySelectorAll('.opt-b').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  setupState[group]=val;
+}
+
+function startGame(){
+  const p1=document.getElementById('p1name')?.value.trim()||PD.name||'You';
+  const p2=document.getElementById('p2name')?.value.trim()||'Opponent';
+  gameSetup={...setupState,players:[p1,p2]};
+  aiMode=gameSetup.mode==='vs-ai';
+  PD.name=p1;SP();
+  initBoard();
+  gameActive=true;paused=false;
+  showPage('pgGame');
+  setTimeout(()=>{renderBoard();updateHUD();startTimer();},100);
+}
+
+function updateSplash(){
+  document.getElementById('splashCoins').textContent=PD.coins;
+  const today=new Date().toDateString();
+  const claimed=PD.lastLogin===today;
+  document.getElementById('dailyBadge').textContent=claimed?'✅ Done':'CLAIM';
+  document.getElementById('streakText').textContent=`Day ${PD.loginStreak||1} streak ${PD.loginStreak>=3?'🔥':''}`;
+  // Floating pieces
+  const splashBg=document.getElementById('splashBg');
+  if(splashBg&&splashBg.children.length===0){
+    const pieces=['♟','♙','♛','♚','♜','♝','♞'];
+    pieces.forEach((p,i)=>{
+      const el=document.createElement('div');
+      el.className='floating-piece';
+      el.textContent=p;
+      el.style.cssText=`left:${10+i*12}%;top:${Math.random()*80+10}%;animation-delay:${i*0.8}s;animation-duration:${6+i}s`;
+      splashBg.appendChild(el);
+    });
+  }
+}
+
+function showHowToPlay(){
+  showNotif('♟ Chess: Move pieces to checkmate the King! Each piece moves differently.');
+}
+
+// ══════════════════════════════════════════
+//  NOTIFICATIONS
+// ══════════════════════════════════════════
+let notifT=null;
+function showNotif(msg){
+  const el=document.getElementById('notif');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(notifT);
+  notifT=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+updateSplash();
+updateLeaderboard(PD.name,PD.coins,PD.wins);
+
+// Check if daily reward should auto-show
+const today=new Date().toDateString();
+if(PD.lastLogin!==today){
+  setTimeout(()=>openDailyReward(),1500);
+}
+</script>
+</body>
+</html>
